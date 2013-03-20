@@ -21,4 +21,5 @@ typedef union {
 	} formated;
 } dht11Data_t;
 
+
 #endif /* DHT11_H_ */
