@@ -12,5 +12,24 @@ uint8_t verifyChecksum(dht11Data_t* recvData) {
 	calcChecksum = recvData->formated.decHumidity
 			+ recvData->formated.decTemperature + recvData->formated.intHumidity
 			+ recvData->formated.intTemperature;
-	return calcChecksum ^ receivedData->formated.checkSum;// should be 0 in case of success otherwise the wrong bits are set to 1
+	return calcChecksum ^ recvData->formated.checkSum;// should be 0 in case of success otherwise the wrong bits are set to 1
+}
+
+uint8_t getData(dht11Data_t* recvData) {
+
+	return verifyChecksum(recvData); // data is only valid if checkSum is OK
+}
+
+void initPort() {
+
+}
+
+void initClock() {
+
+}
+
+
+#pragma vector=TIMER0_B0
+__interrupt void TIMER_BO_ISR(){
+
 }
