@@ -10,7 +10,7 @@ int main(void) {
     WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
 	
     bla.rawData = 0x0123456789ABCDEF;
-
+    initClock();
 
 	return 0;
 }

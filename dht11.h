@@ -11,6 +11,11 @@
 #include <stdint.h>
 #include <msp430.h>
 
+#define DHTPOUT	P7OUT
+#define DHTPDIR	P7DIR
+#define DHTPIN	BIT5
+
+
 typedef union {
 	uint64_t rawData;
 	struct {
