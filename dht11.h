@@ -9,6 +9,7 @@
 #define DHT11_H_
 
 #include <stdint.h>
+#include <msp430.h>
 
 typedef union {
 	uint64_t rawData;
@@ -21,5 +22,6 @@ typedef union {
 	} formated;
 } dht11Data_t;
 
+void initClock();
 
 #endif /* DHT11_H_ */

@@ -25,11 +25,19 @@ void initPort() {
 }
 
 void initClock() {
+	// enable XT2
+	UCSCTL6 &= ~XT2OFF;
+	while (SFRIFG1 & OFIFG){
+		UCSCTL7 &= ~(DCOFFG+XT1LFOFFG+XT2OFFG);
+		SFRIFG1 &= ~OFIFG;
+	}
 
+	// ACLK = XT2
+	UCSCTL4 |= SELA__XT2CLK;
 }
 
 
-#pragma vector=TIMER0_B0
+#pragma vector=TIMER0_B0_VECTOR
 __interrupt void TIMER_BO_ISR(){
 
 }
