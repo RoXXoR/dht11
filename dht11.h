@@ -11,8 +11,10 @@
 #include <stdint.h>
 #include <msp430.h>
 
+// Port PIN the DHT11 is connected to
 #define DHTPOUT	P7OUT
 #define DHTPDIR	P7DIR
+#define DHTPSEL	P7SEL
 #define DHTPIN	BIT5
 
 
@@ -27,6 +29,13 @@ typedef union {
 	} formated;
 } dht11Data_t;
 
+enum state {
+	start,
+	receive,
+	idle
+};
+
 void initClock();
+uint8_t getData(dht11Data_t* recvData);
 
 #endif /* DHT11_H_ */
