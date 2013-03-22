@@ -6,11 +6,11 @@
 int main(void) {
 	dht11Data_t bla;
 
+	WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
 
-    WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
-
-    initClock();
-    getData(&bla);
-
+	initClock();
+	while (1) {
+		getData(&bla);
+	}
 	return 0;
 }

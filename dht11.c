@@ -26,10 +26,23 @@ uint8_t verifyChecksum(dht11Data_t* recvData) {
 	return calcChecksum ^ recvData->formated.checkSum; // should be 0 in case of success otherwise the wrong bits are set to 1
 }
 
+uint16_t prevCCR = 0;
+uint8_t receivedBit = 0;
+uint64_t receivedData = 0;
+uint8_t initReceived = 0;
+
+void initGlobals() {
+	prevCCR = 0;
+	receivedBit = 0;
+	receivedData = 0;
+	initReceived = 0;
+}
+
+
 uint8_t getData(dht11Data_t* recvData) {
 	DHTPOUT &= ~DHTPIN;
-	currentState = start;
 
+	initGlobals();
 	// Config Timer
 	TB0CCTL0 = CCIE;                         	// TRCCR3 interrupt enabled
 	TB0CCR0 = 36000;							// 18ms @ 2MHz
@@ -37,18 +50,18 @@ uint8_t getData(dht11Data_t* recvData) {
 	DHTPDIR |= DHTPIN;							// set to output
 
 	__bis_SR_register(LPM0_bits + GIE);
-	// Enter LPM3, enable interrupts
+
+	recvData->rawData = receivedData;
 	__no_operation();
 	__no_operation();
 	__no_operation();
-	//return verifyChecksum(recvData); 			// data is only valid if checkSum is OK
-	return 0;
+	return verifyChecksum(recvData); 			// data is only valid if checkSum is OK
 }
 
 void initClock() {
 
 	// ACLK = XT2/2
-	UCSCTL4 |= SELA__XT2CLK;
+	UCSCTL4 |= SELA__XT2CLK | SELM__XT2CLK | SELS_4;
 	UCSCTL5 |= DIVA__2;
 
 	// enable XT2
@@ -61,44 +74,33 @@ void initClock() {
 	}
 }
 
-uint16_t dT = 0;
-uint8_t receivedBit = 0;
-uint64_t receivedData = 0;
-
 #pragma vector=TIMER0_B0_VECTOR
-__interrupt void TIMER_BO_ISR() {
-	enum state nextState;
-	uint8_t tmp;
-	tmp = (uint16_t)TB0IV;
-	switch (currentState) {
-	case start:
-		DHTPOUT |= DHTPIN;							// drive DHT to high
-		TB0CTL = 0;									// stop timer
-		DHTPDIR &= ~DHTPIN;							// set to input
-		DHTPSEL |= DHTPIN;							// enable CCIxA
-		TB0CCTL3 = CM_2 | CAP | CCIE | CCIS_0;		// capture on falling edge
-		TB0CTL = TBSSEL__ACLK | MC_2 | TBCLR;		// ACLK, cont., clear TBR
-		nextState = receive;
-		break;
-	case receive:
-		dT = TB0CCR3 - dT;
-		TB0CCTL3 &= ~CCIFG;
-		if (receivedBit == 0 && (320 < dT < 360)) {	// DHT Init signal
-			receivedBit++;
-		} else if (receivedBit == 40) {				// End signal
-			TB0CTL = 0;		// stop timer
-			nextState = idle;
-			__bic_SR_register(LPM4_bits + GIE);
-		} else {
-			receivedData <<= (receivedBit - 1);
-			if (230 < dT < 270) {
-				receivedData |= 1;
-			}
-			receivedBit++;
-		}
-		__no_operation();
-		break;
+__interrupt void TIMER0_BO_ISR() {
+	DHTPOUT |= DHTPIN;							// drive DHT to high
+	TB0CTL = 0;									// stop timer
+	DHTPDIR &= ~DHTPIN;							// set to DHT pin to input
+	DHTPSEL |= DHTPIN;							// enable CCIxA
+	TB0CCTL3 = CM_2 | CAP | CCIE | CCIS_0;		// capture on falling edge
+	TB0CTL = TBSSEL__ACLK | MC_2 | TBCLR;		// ACLK, cont., clear TBR
+}
 
+#pragma vector=TIMER0_B1_VECTOR
+__interrupt void TIMER0_B1_ISR() {
+	if (!initReceived) {	// DHT Init signal
+		if (300 < (TBCCR3 - prevCCR)) {
+			initReceived = 1;
+		}
+	} else {
+		receivedData <<= 1;
+		if (200 < (TBCCR3 - prevCCR)) {
+			receivedData |= 1;
+		}
+		receivedBit++;
+		if (receivedBit >= 40) {				// End signal
+			TB0CTL = 0;		// stop timer
+			__bic_SR_register_on_exit(LPM4_bits + GIE);
+		}
 	}
-	currentState = nextState;
+	prevCCR = TBCCR3;
+	TB0CCTL3 &= ~CCIFG;
 }
